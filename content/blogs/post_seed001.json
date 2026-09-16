@@ -1,0 +1,70 @@
+{
+  "id": "post_seed001",
+  "title": "Designing for clarity, not decoration",
+  "slug": "designing-for-clarity-not-decoration",
+  "excerpt": "The best interfaces disappear. A short case for restraint over flourish when the goal is to help someone think.",
+  "featuredImage": null,
+  "author": "Alex Rivera",
+  "category": "design",
+  "tags": ["design", "typography", "minimalism"],
+  "published": true,
+  "publishedAt": "2026-08-04T09:00:00.000Z",
+  "createdAt": "2026-08-01T14:12:00.000Z",
+  "updatedAt": "2026-08-04T09:00:00.000Z",
+  "seoTitle": "Designing for clarity, not decoration",
+  "seoDescription": "A short case for restraint over flourish in interface design — and how to tell the difference between the two.",
+  "content": [
+    {
+      "id": "b1",
+      "type": "paragraph",
+      "text": "Every interface makes a thousand small arguments before a single word of content loads. Spacing argues for hierarchy. Color argues for meaning. Motion argues for attention. Most of the time, the argument nobody notices is the one that was won."
+    },
+    {
+      "id": "b2",
+      "type": "heading",
+      "level": 2,
+      "text": "Decoration asks to be noticed"
+    },
+    {
+      "id": "b3",
+      "type": "paragraph",
+      "text": "A gradient, a flourish, an animation that lingers a beat too long — these are choices that want credit. They're not wrong on their own, but they compete with the content for the same attention budget. The question worth asking of any visual decision is simple: *does this help someone understand the page faster, or does it just look considered?*"
+    },
+    {
+      "id": "b4",
+      "type": "quote",
+      "text": "Good design is as little design as possible.",
+      "cite": "Dieter Rams"
+    },
+    {
+      "id": "b5",
+      "type": "heading",
+      "level": 2,
+      "text": "A short checklist"
+    },
+    {
+      "id": "b6",
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Can the hierarchy be read from spacing and type alone, before color is added?",
+        "Would removing this element change how quickly someone finds what they need?",
+        "Does every animation earn its duration, or is it filling silence?"
+      ]
+    },
+    {
+      "id": "b7",
+      "type": "paragraph",
+      "text": "None of this is an argument against personality. A distinct voice and a considered palette are not decoration — they're part of how a product tells you what it is. The difference is whether the choice serves understanding or simply survives a mood board."
+    },
+    {
+      "id": "b8",
+      "type": "divider"
+    },
+    {
+      "id": "b9",
+      "type": "paragraph",
+      "text": "Clarity is not the absence of style. It's style that has been asked to justify itself, and did."
+    }
+  ]
+}

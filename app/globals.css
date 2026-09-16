@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #ffffff;
+  --color-foreground: #18181b;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+}
+
+/* Keep long words and URLs from breaking the article layout on small screens. */
+.article-body {
+  overflow-wrap: break-word;
+}
+
+::selection {
+  background: #18181b;
+  color: #ffffff;
+}

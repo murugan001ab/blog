@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cat_design",
+    "name": "Design",
+    "slug": "design",
+    "description": "Typography, layout, and the small decisions that make software feel considered."
+  },
+  {
+    "id": "cat_engineering",
+    "name": "Engineering",
+    "slug": "engineering",
+    "description": "Notes from building and shipping real products."
+  },
+  {
+    "id": "cat_writing",
+    "name": "Writing",
+    "slug": "writing",
+    "description": "On the craft of writing clearly about technical work."
+  }
+]

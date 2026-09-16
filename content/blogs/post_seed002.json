@@ -1,0 +1,66 @@
+{
+  "id": "post_seed002",
+  "title": "A JSON-file blog that still scales",
+  "slug": "a-json-file-blog-that-still-scales",
+  "excerpt": "You don't need a database to publish a blog. You need a storage layer with a clean seam — so you can add one later without touching everything else.",
+  "featuredImage": null,
+  "author": "Priya Nair",
+  "category": "engineering",
+  "tags": ["nextjs", "architecture", "static-sites"],
+  "published": true,
+  "publishedAt": "2026-08-12T09:00:00.000Z",
+  "createdAt": "2026-08-10T11:00:00.000Z",
+  "updatedAt": "2026-08-12T09:00:00.000Z",
+  "seoTitle": "A JSON-file blog that still scales",
+  "seoDescription": "How to structure a Next.js blog around local JSON files without painting yourself into a corner when you eventually need a real database.",
+  "content": [
+    {
+      "id": "b1",
+      "type": "paragraph",
+      "text": "Most blogs don't need a database on day one. They need fast pages, an editor that doesn't fight the author, and URLs that don't break. A folder of JSON files can satisfy all three — as long as nothing outside one module knows that's how it's implemented."
+    },
+    {
+      "id": "b2",
+      "type": "heading",
+      "level": 2,
+      "text": "One seam, not zero"
+    },
+    {
+      "id": "b3",
+      "type": "paragraph",
+      "text": "The trick isn't avoiding structure — it's choosing where the structure lives. Every page and Server Action in this project imports from `lib/blog/queries.ts` and `lib/blog/actions.ts`. Neither of those files touches the filesystem directly; they call into `lib/blog/store.ts`, which is the only module that knows content lives in `content/blogs/*.json`."
+    },
+    {
+      "id": "b4",
+      "type": "code",
+      "language": "ts",
+      "code": "export async function getPostById(id: string): Promise<BlogPost | null> {\n  return readJson(path.join(BLOG_DIR, `${id}.json`), null);\n}"
+    },
+    {
+      "id": "b5",
+      "type": "paragraph",
+      "text": "Move to Postgres later, and this is the only file that changes. Everything above it — pages, actions, the admin UI — keeps working, because it never knew where the data actually lived."
+    },
+    {
+      "id": "b6",
+      "type": "heading",
+      "level": 2,
+      "text": "What this trades away"
+    },
+    {
+      "id": "b7",
+      "type": "list",
+      "ordered": true,
+      "items": [
+        "No concurrent-write safety — fine for a single admin, not for a newsroom.",
+        "Reads walk every file in the posts directory, which is instant at hundreds of posts and worth revisiting at tens of thousands.",
+        "No filesystem writes on read-only hosting — plan your deploy target accordingly."
+      ]
+    },
+    {
+      "id": "b8",
+      "type": "paragraph",
+      "text": "For a blog run by one or two people, publishing a few times a week, those trade-offs are the right ones. The moment they aren't, there's exactly one file to rewrite."
+    }
+  ]
+}

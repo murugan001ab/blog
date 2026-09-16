@@ -1,0 +1,54 @@
+{
+  "id": "post_seed003",
+  "title": "Write the sentence a beginner can follow",
+  "slug": "write-the-sentence-a-beginner-can-follow",
+  "excerpt": "Technical writing gets clearer when you stop optimizing for people who already know the answer.",
+  "featuredImage": null,
+  "author": "Alex Rivera",
+  "category": "writing",
+  "tags": ["writing", "documentation"],
+  "published": true,
+  "publishedAt": "2026-08-20T09:00:00.000Z",
+  "createdAt": "2026-08-18T10:00:00.000Z",
+  "updatedAt": "2026-08-20T09:00:00.000Z",
+  "seoTitle": "Write the sentence a beginner can follow",
+  "seoDescription": "A practical case for writing technical explanations for the reader who doesn't already know the answer.",
+  "content": [
+    {
+      "id": "b1",
+      "type": "paragraph",
+      "text": "It's easy to write a sentence that's technically correct and still useless to the person reading it. The usual cause isn't a lack of knowledge — it's writing for the reader you wish you had instead of the one you actually have."
+    },
+    {
+      "id": "b2",
+      "type": "paragraph",
+      "text": "A sentence like *\"configure the adapter to expose the resolved context\"* is accurate. It's also meaningless to someone encountering the system for the first time. The fix usually isn't more words — it's naming the concrete thing before the abstract one."
+    },
+    {
+      "id": "b3",
+      "type": "heading",
+      "level": 2,
+      "text": "A small rewrite"
+    },
+    {
+      "id": "b4",
+      "type": "quote",
+      "text": "Configure the adapter to expose the resolved context."
+    },
+    {
+      "id": "b5",
+      "type": "paragraph",
+      "text": "becomes:"
+    },
+    {
+      "id": "b6",
+      "type": "quote",
+      "text": "Add a `getContext()` function that returns the current user's settings, and pass it to the adapter when you create it."
+    },
+    {
+      "id": "b7",
+      "type": "paragraph",
+      "text": "Same idea, but now it names the function, the return value, and when to call it. Nothing about the second version is less precise — it's just precise about things a reader can act on."
+    }
+  ]
+}
