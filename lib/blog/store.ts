@@ -140,8 +140,10 @@ export async function removeImage(publicUrl: string): Promise<void> {
       limit: 1,
     });
 
-    const fileId = matches[0]?.fileId;
-    if (fileId) await imagekit.deleteFile(fileId);
+    const match = matches.find(
+      (file): file is typeof file & { fileId: string } => "fileId" in file,
+    );
+    if (match) await imagekit.deleteFile(match.fileId);
   } catch (error) {
     console.error("ImageKit delete failed:", error);
     throw new Error("Couldn't delete that image. Please try again.");
