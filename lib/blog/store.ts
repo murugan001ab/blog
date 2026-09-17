@@ -1,8 +1,8 @@
-import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { BlogPost, Category } from "@/types/blog";
 import { ensureSchema, sql } from "@/lib/db";
+import { imagekit, IMAGEKIT_FOLDER } from "@/lib/imagekit";
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
@@ -10,20 +10,11 @@ import { ensureSchema, sql } from "@/lib/db";
  *
  * Posts and categories live in Postgres (Aiven), stored as JSONB so the
  * BlogPost / Category shape can keep evolving without a migration each time.
- * Uploaded images still live on the local filesystem — see the note at the
- * bottom of this file, since that has the same "read-only on Vercel" problem
- * posts used to have.
+ * Uploaded images live in ImageKit — Vercel's filesystem is read-only, so
+ * local disk never worked in production; ImageKit gives durable storage plus
+ * a CDN URL back from the upload call itself.
  * ─────────────────────────────────────────────────────────────────────────────
  */
-
-const UPLOAD_DIR = path.join(process.cwd(), "public", "images", "blogs");
-
-/** Public URL prefix that maps to UPLOAD_DIR. */
-export const UPLOAD_URL_PREFIX = "/images/blogs";
-
-async function ensureDir(dir: string): Promise<void> {
-  await fs.mkdir(dir, { recursive: true });
-}
 
 /* ── Posts ─────────────────────────────────────────────────────────────── */
 
@@ -95,38 +86,25 @@ export async function saveCategories(categories: Category[]): Promise<void> {
   });
 }
 
-/* ── Image library (still filesystem — see note below) ───────────────── */
+/* ── Image library (ImageKit) ─────────────────────────────────────────── */
 
-const IMAGE_EXTENSIONS = new Set([
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".webp",
-  ".avif",
-  ".gif",
-]);
-
-/** Public URLs of every uploaded image, newest first. Returns [] on a
- * read-only filesystem (Vercel) instead of crashing the page — image
- * uploads won't work there until this moves to Vercel Blob or similar. */
+/** Public URLs of every uploaded image, newest first. Returns [] if the
+ * ImageKit call fails, instead of crashing the media page. */
 export async function listImages(): Promise<string[]> {
   try {
-    await ensureDir(UPLOAD_DIR);
-    const files = await fs.readdir(UPLOAD_DIR);
+    const files = await imagekit.listFiles({
+      path: IMAGEKIT_FOLDER,
+      sort: "DESC_CREATED",
+      limit: 1000,
+    });
 
-    const stats = await Promise.all(
-      files
-        .filter((file) => IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase()))
-        .map(async (file) => ({
-          file,
-          time: (await fs.stat(path.join(UPLOAD_DIR, file))).mtimeMs,
-        })),
-    );
-
-    return stats
-      .sort((a, b) => b.time - a.time)
-      .map(({ file }) => `${UPLOAD_URL_PREFIX}/${file}`);
-  } catch {
+    return files
+      .filter((file): file is typeof file & { url: string; type?: string } =>
+        "url" in file && (file as { type?: string }).type !== "folder",
+      )
+      .map((file) => file.url);
+  } catch (error) {
+    console.error("ImageKit listFiles failed:", error);
     return [];
   }
 }
@@ -136,21 +114,38 @@ export async function writeImage(
   data: Buffer,
 ): Promise<string> {
   if (!isSafeFilename(filename)) throw new Error("Invalid file name.");
+
   try {
-    await ensureDir(UPLOAD_DIR);
-    await fs.writeFile(path.join(UPLOAD_DIR, filename), data);
-    return `${UPLOAD_URL_PREFIX}/${filename}`;
-  } catch {
-    throw new Error(
-      "Image uploads aren't available on this deployment yet (the server's storage is read-only). Ask your developer to set up file storage for uploads.",
-    );
+    const response = await imagekit.upload({
+      file: data,
+      fileName: filename,
+      folder: IMAGEKIT_FOLDER,
+      useUniqueFileName: false,
+    });
+    return response.url;
+  } catch (error) {
+    console.error("ImageKit upload failed:", error);
+    throw new Error("Image upload failed. Please try again.");
   }
 }
 
 export async function removeImage(publicUrl: string): Promise<void> {
   const filename = path.basename(publicUrl);
   if (!isSafeFilename(filename)) throw new Error("Invalid file name.");
-  await fs.rm(path.join(UPLOAD_DIR, filename), { force: true });
+
+  try {
+    const matches = await imagekit.listFiles({
+      path: IMAGEKIT_FOLDER,
+      searchQuery: `name = "${filename}"`,
+      limit: 1,
+    });
+
+    const fileId = matches[0]?.fileId;
+    if (fileId) await imagekit.deleteFile(fileId);
+  } catch (error) {
+    console.error("ImageKit delete failed:", error);
+    throw new Error("Couldn't delete that image. Please try again.");
+  }
 }
 
 /* ── Guards ────────────────────────────────────────────────────────────── */

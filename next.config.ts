@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
     // Postgres connections opened against Aiven's connection limit.
     staticGenerationMaxConcurrency: 3,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+        pathname: "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

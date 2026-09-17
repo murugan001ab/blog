@@ -267,10 +267,16 @@ export async function uploadImageAction(
   const filename = `${base}-${Date.now().toString(36)}${extension}`;
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const url = await writeImage(filename, buffer);
 
-  revalidatePath("/admin");
-  return { ok: true, data: { url } };
+  try {
+    const url = await writeImage(filename, buffer);
+    revalidatePath("/admin");
+    return { ok: true, data: { url } };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Upload failed. Please try again.";
+    return { ok: false, message };
+  }
 }
 
 export async function deleteImageAction(url: string): Promise<ActionResult> {
@@ -289,8 +295,13 @@ export async function deleteImageAction(url: string): Promise<ActionResult> {
     return { ok: false, message: "That image is still used by a post." };
   }
 
-  await removeImage(url);
-  revalidatePath("/admin");
-
-  return { ok: true };
+  try {
+    await removeImage(url);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Couldn't delete that image.";
+    return { ok: false, message };
+  }
 }
