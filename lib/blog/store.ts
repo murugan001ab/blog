@@ -2,21 +2,20 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import type { BlogPost, Category } from "@/types/blog";
+import { ensureSchema, sql } from "@/lib/db";
 
 /**
  * ─────────────────────────────────────────────────────────────────────────────
  * STORAGE ADAPTER — the only module that knows where content physically lives.
  *
- * Everything above this file (queries, actions, pages) talks in terms of
- * BlogPost / Category objects. To move to Postgres, Prisma, Supabase or a
- * headless CMS later, reimplement these exported functions and delete nothing
- * else. The signatures are already async for exactly that reason.
+ * Posts and categories live in Postgres (Aiven), stored as JSONB so the
+ * BlogPost / Category shape can keep evolving without a migration each time.
+ * Uploaded images still live on the local filesystem — see the note at the
+ * bottom of this file, since that has the same "read-only on Vercel" problem
+ * posts used to have.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-const CONTENT_DIR = path.join(process.cwd(), "content");
-const BLOG_DIR = path.join(CONTENT_DIR, "blogs");
-const CATEGORIES_FILE = path.join(CONTENT_DIR, "categories.json");
 const UPLOAD_DIR = path.join(process.cwd(), "public", "images", "blogs");
 
 /** Public URL prefix that maps to UPLOAD_DIR. */
@@ -26,37 +25,15 @@ async function ensureDir(dir: string): Promise<void> {
   await fs.mkdir(dir, { recursive: true });
 }
 
-async function readJson<T>(file: string, fallback: T): Promise<T> {
-  try {
-    const raw = await fs.readFile(file, "utf8");
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-async function writeJson(file: string, value: unknown): Promise<void> {
-  await ensureDir(path.dirname(file));
-  await fs.writeFile(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
-
 /* ── Posts ─────────────────────────────────────────────────────────────── */
 
 /** Every post, drafts included. Newest first. */
 export async function getAllPosts(): Promise<BlogPost[]> {
-  await ensureDir(BLOG_DIR);
-  const files = await fs.readdir(BLOG_DIR);
+  await ensureSchema();
+  const rows = await sql<{ data: BlogPost }[]>`SELECT data FROM posts`;
 
-  const posts = await Promise.all(
-    files
-      .filter((file) => file.endsWith(".json"))
-      .map((file) =>
-        readJson<BlogPost | null>(path.join(BLOG_DIR, file), null),
-      ),
-  );
-
-  return posts
-    .filter((post): post is BlogPost => post !== null && Boolean(post.id))
+  return rows
+    .map((row) => row.data)
     .sort((a, b) => {
       const aDate = a.publishedAt ?? a.updatedAt ?? a.createdAt;
       const bDate = b.publishedAt ?? b.updatedAt ?? b.createdAt;
@@ -66,32 +43,59 @@ export async function getAllPosts(): Promise<BlogPost[]> {
 
 export async function getPostById(id: string): Promise<BlogPost | null> {
   if (!isSafeId(id)) return null;
-  return readJson<BlogPost | null>(path.join(BLOG_DIR, `${id}.json`), null);
+  await ensureSchema();
+
+  const rows = await sql<{ data: BlogPost }[]>`
+    SELECT data FROM posts WHERE id = ${id}
+  `;
+  return rows[0]?.data ?? null;
 }
 
 export async function savePost(post: BlogPost): Promise<BlogPost> {
   if (!isSafeId(post.id)) throw new Error("Invalid post id.");
-  await writeJson(path.join(BLOG_DIR, `${post.id}.json`), post);
+  await ensureSchema();
+
+  await sql`
+    INSERT INTO posts (id, data)
+    VALUES (${post.id}, ${sql.json(post)})
+    ON CONFLICT (id) DO UPDATE SET data = ${sql.json(post)}
+  `;
   return post;
 }
 
 export async function removePost(id: string): Promise<void> {
   if (!isSafeId(id)) throw new Error("Invalid post id.");
-  await fs.rm(path.join(BLOG_DIR, `${id}.json`), { force: true });
+  await ensureSchema();
+  await sql`DELETE FROM posts WHERE id = ${id}`;
 }
 
 /* ── Categories ────────────────────────────────────────────────────────── */
 
 export async function getAllCategories(): Promise<Category[]> {
-  const categories = await readJson<Category[]>(CATEGORIES_FILE, []);
-  return [...categories].sort((a, b) => a.name.localeCompare(b.name));
+  await ensureSchema();
+  const rows = await sql<{ data: Category }[]>`SELECT data FROM categories`;
+
+  return rows
+    .map((row) => row.data)
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Replaces the entire category list, same contract the JSON-file version had. */
 export async function saveCategories(categories: Category[]): Promise<void> {
-  await writeJson(CATEGORIES_FILE, categories);
+  await ensureSchema();
+
+  await sql.begin(async (tx) => {
+    await tx`DELETE FROM categories`;
+    for (const category of categories) {
+      await tx`
+        INSERT INTO categories (id, data)
+        VALUES (${category.id}, ${tx.json(category)})
+      `;
+    }
+  });
 }
 
-/* ── Image library ─────────────────────────────────────────────────────── */
+/* ── Image library (still filesystem — see note below) ───────────────── */
 
 const IMAGE_EXTENSIONS = new Set([
   ".jpg",
