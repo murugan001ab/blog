@@ -57,8 +57,8 @@ export async function savePost(post: BlogPost): Promise<BlogPost> {
 
   await sql`
     INSERT INTO posts (id, data)
-    VALUES (${post.id}, ${sql.json(post)})
-    ON CONFLICT (id) DO UPDATE SET data = ${sql.json(post)}
+    VALUES (${post.id}, ${sql.json(post as unknown as any)})
+    ON CONFLICT (id) DO UPDATE SET data = ${sql.json(post as unknown as any)}
   `;
   return post;
 }
@@ -89,7 +89,7 @@ export async function saveCategories(categories: Category[]): Promise<void> {
     for (const category of categories) {
       await tx`
         INSERT INTO categories (id, data)
-        VALUES (${category.id}, ${tx.json(category)})
+        VALUES (${category.id}, ${tx.json(category as unknown as any)})
       `;
     }
   });
