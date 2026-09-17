@@ -106,23 +106,29 @@ const IMAGE_EXTENSIONS = new Set([
   ".gif",
 ]);
 
-/** Public URLs of every uploaded image, newest first. */
+/** Public URLs of every uploaded image, newest first. Returns [] on a
+ * read-only filesystem (Vercel) instead of crashing the page — image
+ * uploads won't work there until this moves to Vercel Blob or similar. */
 export async function listImages(): Promise<string[]> {
-  await ensureDir(UPLOAD_DIR);
-  const files = await fs.readdir(UPLOAD_DIR);
+  try {
+    await ensureDir(UPLOAD_DIR);
+    const files = await fs.readdir(UPLOAD_DIR);
 
-  const stats = await Promise.all(
-    files
-      .filter((file) => IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase()))
-      .map(async (file) => ({
-        file,
-        time: (await fs.stat(path.join(UPLOAD_DIR, file))).mtimeMs,
-      })),
-  );
+    const stats = await Promise.all(
+      files
+        .filter((file) => IMAGE_EXTENSIONS.has(path.extname(file).toLowerCase()))
+        .map(async (file) => ({
+          file,
+          time: (await fs.stat(path.join(UPLOAD_DIR, file))).mtimeMs,
+        })),
+    );
 
-  return stats
-    .sort((a, b) => b.time - a.time)
-    .map(({ file }) => `${UPLOAD_URL_PREFIX}/${file}`);
+    return stats
+      .sort((a, b) => b.time - a.time)
+      .map(({ file }) => `${UPLOAD_URL_PREFIX}/${file}`);
+  } catch {
+    return [];
+  }
 }
 
 export async function writeImage(
@@ -130,9 +136,15 @@ export async function writeImage(
   data: Buffer,
 ): Promise<string> {
   if (!isSafeFilename(filename)) throw new Error("Invalid file name.");
-  await ensureDir(UPLOAD_DIR);
-  await fs.writeFile(path.join(UPLOAD_DIR, filename), data);
-  return `${UPLOAD_URL_PREFIX}/${filename}`;
+  try {
+    await ensureDir(UPLOAD_DIR);
+    await fs.writeFile(path.join(UPLOAD_DIR, filename), data);
+    return `${UPLOAD_URL_PREFIX}/${filename}`;
+  } catch {
+    throw new Error(
+      "Image uploads aren't available on this deployment yet (the server's storage is read-only). Ask your developer to set up file storage for uploads.",
+    );
+  }
 }
 
 export async function removeImage(publicUrl: string): Promise<void> {

@@ -20,15 +20,7 @@ async function readJson(file, fallback) {
   }
 }
 
-async function main() {
-  if (!process.env.DATABASE_URL) {
-    throw new Error(
-      "DATABASE_URL is not set. Make sure .env.local exists and you're running via `npm run migrate`.",
-    );
-  }
-
-  const sql = postgres(process.env.DATABASE_URL, { ssl: "require", max: 1 });
-
+async function main(sql) {
   await sql`
     CREATE TABLE IF NOT EXISTS posts (
       id text PRIMARY KEY,
@@ -76,12 +68,31 @@ async function main() {
     if (err.code !== "ENOENT") throw err;
   }
 
-  console.log(`Migrated ${categoryCount} categor${categoryCount === 1 ? "y" : "ies"} and ${postCount} post${postCount === 1 ? "" : "s"}.`);
-
-  await sql.end();
+  console.log(
+    `Migrated ${categoryCount} categor${categoryCount === 1 ? "y" : "ies"} and ${postCount} post${postCount === 1 ? "" : "s"}.`,
+  );
 }
 
-main().catch((err) => {
+async function run() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL is not set. Make sure .env.local exists and you're running via `npm run migrate`.",
+    );
+  }
+
+  // A single connection, released the moment we're done — success or not.
+  const sql = postgres(process.env.DATABASE_URL, { ssl: "require", max: 1 });
+
+  try {
+    await main(sql);
+  } finally {
+    // Always runs, even if a query above throws, so a failed migration
+    // never leaves a stuck connection slot on the server.
+    await sql.end({ timeout: 5 });
+  }
+}
+
+run().catch((err) => {
   console.error("Migration failed:", err);
-  process.exit(1);
+  process.exitCode = 1;
 });
