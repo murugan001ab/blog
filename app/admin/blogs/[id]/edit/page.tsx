@@ -15,11 +15,12 @@ export default async function EditPostPage(
 ) {
   const { id } = await props.params;
 
-  const [post, categories, images] = await Promise.all([
+  const [post, categories, imageLibrary] = await Promise.all([
     getPostById(id),
     getCategories(),
     getImageLibrary(),
   ]);
+  const images = imageLibrary.map((image) => image.url);
 
   if (!post) notFound();
 

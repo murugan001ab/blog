@@ -116,3 +116,9 @@ export interface ActionResult<T = undefined> {
   message?: string;
   data?: T;
 }
+
+/** An uploaded image as shown in the media library, with its file size in bytes. */
+export interface MediaImage {
+  url: string;
+  size: number;
+}

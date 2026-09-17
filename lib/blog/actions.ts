@@ -9,6 +9,7 @@ import type {
   BlogPost,
   BlogPostInput,
   Category,
+  MediaImage,
 } from "@/types/blog";
 import { requireAdmin } from "@/lib/auth";
 import {
@@ -245,7 +246,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 export async function uploadImageAction(
   formData: FormData,
-): Promise<ActionResult<{ url: string }>> {
+): Promise<ActionResult<MediaImage>> {
   await requireAdmin();
 
   const file = formData.get("file");
@@ -269,9 +270,9 @@ export async function uploadImageAction(
   const buffer = Buffer.from(await file.arrayBuffer());
 
   try {
-    const url = await writeImage(filename, buffer);
+    const image = await writeImage(filename, buffer);
     revalidatePath("/admin");
-    return { ok: true, data: { url } };
+    return { ok: true, data: image };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Upload failed. Please try again.";

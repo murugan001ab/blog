@@ -1,4 +1,4 @@
-import type { BlogPost, Category } from "@/types/blog";
+import type { BlogPost, Category, MediaImage } from "@/types/blog";
 import {
   getAllCategories,
   getAllPosts,
@@ -131,7 +131,7 @@ export async function getDashboardStats(): Promise<{
   };
 }
 
-export async function getImageLibrary(): Promise<string[]> {
+export async function getImageLibrary(): Promise<MediaImage[]> {
   return listImages();
 }
 

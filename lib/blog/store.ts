@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { BlogPost, Category } from "@/types/blog";
+import type { BlogPost, Category, MediaImage } from "@/types/blog";
 import { ensureSchema, sql } from "@/lib/db";
 import { imagekit, IMAGEKIT_FOLDER } from "@/lib/imagekit";
 
@@ -88,9 +88,9 @@ export async function saveCategories(categories: Category[]): Promise<void> {
 
 /* ── Image library (ImageKit) ─────────────────────────────────────────── */
 
-/** Public URLs of every uploaded image, newest first. Returns [] if the
+/** Every uploaded image with its size, newest first. Returns [] if the
  * ImageKit call fails, instead of crashing the media page. */
-export async function listImages(): Promise<string[]> {
+export async function listImages(): Promise<MediaImage[]> {
   try {
     const files = await imagekit.listFiles({
       path: IMAGEKIT_FOLDER,
@@ -99,10 +99,11 @@ export async function listImages(): Promise<string[]> {
     });
 
     return files
-      .filter((file): file is typeof file & { url: string; type?: string } =>
-        "url" in file && (file as { type?: string }).type !== "folder",
+      .filter(
+        (file): file is typeof file & { url: string; size: number; type?: string } =>
+          "url" in file && (file as { type?: string }).type !== "folder",
       )
-      .map((file) => file.url);
+      .map((file) => ({ url: file.url, size: file.size ?? 0 }));
   } catch (error) {
     console.error("ImageKit listFiles failed:", error);
     return [];
@@ -112,7 +113,7 @@ export async function listImages(): Promise<string[]> {
 export async function writeImage(
   filename: string,
   data: Buffer,
-): Promise<string> {
+): Promise<MediaImage> {
   if (!isSafeFilename(filename)) throw new Error("Invalid file name.");
 
   try {
@@ -122,7 +123,7 @@ export async function writeImage(
       folder: IMAGEKIT_FOLDER,
       useUniqueFileName: false,
     });
-    return response.url;
+    return { url: response.url, size: response.size ?? data.byteLength };
   } catch (error) {
     console.error("ImageKit upload failed:", error);
     throw new Error("Image upload failed. Please try again.");

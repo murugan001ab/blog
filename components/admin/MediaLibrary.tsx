@@ -3,10 +3,23 @@
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 
+import type { MediaImage } from "@/types/blog";
 import { deleteImageAction, uploadImageAction } from "@/lib/blog/actions";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-export function MediaLibrary({ images: initial }: { images: string[] }) {
+/** Formats a byte count as a short human-readable size, e.g. "482 KB", "1.4 MB". */
+function formatBytes(bytes: number): string {
+  if (!bytes) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** exponent;
+  return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`;
+}
+
+export function MediaLibrary({ images: initial }: { images: MediaImage[] }) {
   const [images, setImages] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [uploading, startUpload] = useTransition();
@@ -26,7 +39,7 @@ export function MediaLibrary({ images: initial }: { images: string[] }) {
         setError(result.message ?? "Upload failed.");
         return;
       }
-      setImages((current) => [result.data!.url, ...current]);
+      setImages((current) => [result.data!, ...current]);
     });
   }
 
@@ -38,7 +51,7 @@ export function MediaLibrary({ images: initial }: { images: string[] }) {
         setError(result.message ?? "Couldn't delete that image.");
         return;
       }
-      setImages((current) => current.filter((item) => item !== url));
+      setImages((current) => current.filter((item) => item.url !== url));
     });
   }
 
@@ -82,12 +95,15 @@ export function MediaLibrary({ images: initial }: { images: string[] }) {
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-          {images.map((url) => (
+          {images.map(({ url, size }) => (
             <div
               key={url}
               className="group relative aspect-square overflow-hidden rounded-xl bg-zinc-100"
             >
               <Image src={url} alt="" fill sizes="12rem" className="object-cover" />
+              <span className="absolute bottom-2 left-2 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+                {formatBytes(size)}
+              </span>
               <button
                 type="button"
                 onClick={() => remove(url)}
